@@ -207,16 +207,10 @@ button { font: inherit; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: 0 0; } }
 .result-content h2.gameover { color: #ff9fb4; text-shadow: 0 0 22px rgba(255,110,150,.35); }
 .result-rank.big { font-size: 13px; letter-spacing: .26em; color: #d9f4ff; text-shadow: 0 0 14px rgba(108,208,255,.6); }
-.result-note { margin-top: 26px; min-height: 12px; color: #7f8da3; font: 9px "DM Mono", monospace; letter-spacing: .3em; }
+.result-note { margin-top: 26px; min-height: 12px; color: #a8e5ff; font: 13px "DM Mono", monospace; letter-spacing: .2em; text-shadow: 0 0 10px rgba(108,208,255,.5); }
 .result-note:empty { margin-top: 0; min-height: 0; }
 #result-screen { overflow: hidden; }
 #confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-#confetti i { position: absolute; top: -4%; width: 7px; height: 16px; border-radius: 2px; opacity: 0; animation: confettiFall linear forwards; }
-@keyframes confettiFall {
-  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-  8% { opacity: .95; }
-  100% { transform: translateY(112vh) rotate(540deg); opacity: .8; }
-}
 .result-actions { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
 .song-title { position: absolute; left: 50%; top: 36%; transform: translate(-50%,-50%); width: 88%; white-space: normal; text-align: center; color: rgba(225,243,255,.9); font: 300 clamp(15px, 3.4vw, 26px) "DM Mono", monospace; letter-spacing: .3em; text-shadow: 0 0 18px rgba(99,207,255,.5); opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
 .song-title.show { opacity: 1; }
@@ -312,16 +306,13 @@ button { font: inherit; }
 
     <section id="title-screen" class="screen active">
       <div class="title-center">
-        
         <h1>CADENZA</h1>
-        
         <button id="start-note" class="start-note" aria-label="Start game">
           <span class="note-core"></span>
           <span class="note-halo"></span>
         </button>
         <div class="start-caption">TAP TO START</div>
       </div>
-      
     </section>
 
     <section id="game-screen" class="screen">
@@ -559,20 +550,6 @@ button { font: inherit; }
     b.classList.remove("hit");
     b.classList.toggle("is-note", titleIsNote());
   }
-  // 落ちてくるノーツの紙吹雪
-  function confetti() {
-    const box = $("confetti");
-    const colors = ["#bfeaff", "#ffc6d9", "#bff5dc", "#f4e77a", "#d49bea", "#ffffff"];
-    let h = "";
-    for (let i = 0; i < 44; i++) {
-      h += `<i style="left:${(Math.random() * 100).toFixed(1)}%;background:${colors[i % colors.length]};` +
-        `animation-duration:${(3.2 + Math.random() * 2.6).toFixed(2)}s;animation-delay:${(Math.random() * 2.2).toFixed(2)}s;` +
-        `box-shadow:0 0 8px ${colors[i % colors.length]}"></i>`;
-    }
-    box.innerHTML = h;
-    clearTimeout(confetti.t);
-    confetti.t = setTimeout(() => { box.innerHTML = ""; }, 9000);
-  }
   function endingClear() {
     const b = $("start-note");
     b.classList.add("hit");
@@ -589,13 +566,12 @@ button { font: inherit; }
       $("result-eyebrow").textContent = "ALL MOVEMENTS COMPLETE";
       $("result-title").textContent = "FULL COMBO";
       $("result-title").classList.add("shimmer");
-      $("result-rank").textContent = "FULL COMBO RATE 100%";
+      $("result-rank").textContent = "CLEAR";
       $("result-rank").classList.add("big");
-      $("result-note").textContent = "THANK YOU FOR PLAYING.";
+      $("result-note").textContent = "";
       $("retry").innerHTML = "RETRY <span>↻</span>";
       $("retry").style.display = "";
       showScreen("result");
-      confetti();
     }, 450);
   }
   function formatTime(seconds) { return `0:${String(Math.max(0, Math.floor(seconds))).padStart(2, "0")}`; }
@@ -1219,19 +1195,16 @@ button { font: inherit; }
     ["shimmer", "gameover"].forEach(c => $("result-title").classList.remove(c));
     $("result-rank").classList.remove("big");
     $("result-note").textContent = "";
-    $("confetti").innerHTML = "";
-    let celebrate = false;
     if (failed) {
       $("result-title").textContent = "GAME OVER";
       $("result-title").classList.add("gameover");
       $("result-rank").textContent = "FAILED";
     } else if (state.stage === FINALE) {
-      // 第十楽章：フルコンボ＝クリア。「フルコンボ率99%」。最初のプレイでフルコンできなければオート解放（下で）。
-      $("result-title").textContent = "FULL COMBO";
+      // 第十楽章：フルコンボ＝クリア。「FULL COMBO RATE 99%」。最初のプレイでフルコンできなければオート解放（下で）。
+      $("result-title").textContent = "FULL COMBO RATE 99%";
       $("result-title").classList.add("shimmer");
       $("result-rank").textContent = progress.flags.cleared ? "FULL COMBO RATE 100%" : "FULL COMBO RATE 99%";
       $("result-rank").classList.add("big");
-      celebrate = true;
     } else {
       $("result-title").innerHTML = `Next is<br>${TITLES[next]}`;
       $("result-rank").textContent = state.miss === 0 ? "CLEAR" : "CLEARED";
@@ -1248,7 +1221,6 @@ button { font: inherit; }
     }
     saveProgress();
     showScreen("result");
-    if (celebrate) confetti();
   }
 
   $("vol").addEventListener("input", (e) => {
