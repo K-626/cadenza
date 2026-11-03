@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08090d">
+  <title>CADENZA</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600&display=swap');
+
+:root {
+  color-scheme: dark;
+  --bg: #08090d;
+  --panel: #0c0f16;
+  --text: #eef3fb;
+  --muted: #697386;
+  --faint: #343c4c;
+  --cyan: #a8e5ff;
+  --cyan-strong: #63cfff;
+  --line: rgba(169, 220, 255, .16);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
+body {
+  font-family: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; }
+#app {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 50% 43%, rgba(30, 54, 77, .13), transparent 43%),
+    var(--bg);
+}
+#app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .15;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 100% 4px;
+  z-index: -1;
+}
+.topbar, .site-footer {
+  height: 58px;
+  padding: 0 clamp(18px, 4vw, 54px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  color: #687286;
+  font: 10px "DM Mono", monospace;
+  letter-spacing: .14em;
+}
+.brand { color: #d9e3f0; font-size: 11px; letter-spacing: .18em; }
+.brand span { color: #596477; margin-left: 9px; font-size: 9px; }
+.version { color: #4c5669; }
+.site-footer { height: 42px; font-size: 9px; letter-spacing: .13em; }
+.screen {
+  flex: 1;
+  display: none;
+  min-height: 0;
+  position: relative;
+}
+.screen.active { display: flex; }
+#title-screen { align-items: center; justify-content: center; }
+.title-center { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: -3vh; }
+.eyebrow, .subtitle, .start-caption, .title-footer {
+  color: #78849a;
+  font: 10px "DM Mono", monospace;
+  letter-spacing: .22em;
+}
+.title-center h1 {
+  margin: 19px 0 8px;
+  font-size: clamp(42px, 8vw, 78px);
+  font-weight: 300;
+  letter-spacing: .22em;
+  padding-left: .22em;
+}
+.subtitle { color: #515d70; font-size: 9px; letter-spacing: .18em; }
+.start-note {
+  border: 0;
+  background: transparent;
+  width: 112px;
+  height: 112px;
+  margin: 52px 0 18px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  outline: none;
+}
+.note-core {
+  width: 17px; height: 17px; border-radius: 50%;
+  background: #d8f4ff;
+  box-shadow: 0 0 8px 2px rgba(154,225,255,.8), 0 0 28px 8px rgba(80,186,255,.28);
+  transition: transform .25s ease, box-shadow .25s ease;
+  z-index: 2;
+}
+.note-halo {
+  position: absolute;
+  width: 48px; height: 48px; border: 1px solid rgba(143,218,255,.45);
+  border-radius: 50%;
+  box-shadow: 0 0 25px rgba(100,194,255,.12), inset 0 0 15px rgba(100,194,255,.08);
+  transition: transform .3s ease, opacity .3s ease;
+}
+.start-note:hover .note-core { transform: scale(1.22); box-shadow: 0 0 12px 4px rgba(154,225,255,.95), 0 0 42px 12px rgba(80,186,255,.4); }
+.start-note:hover .note-halo { transform: scale(1.35); opacity: .8; }
+.start-note:active .note-core { transform: scale(.82); }
+.start-caption { color: #9ba9bc; font-size: 9px; }
+.title-footer { position: absolute; bottom: 7%; color: #424c5e; font-size: 9px; }
+
+#game-screen { flex-direction: column; width: 100%; max-width: 900px; margin: 0 auto; padding: 10px clamp(14px, 4vw, 42px) 12px; }
+.game-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 0 16px; }
+.game-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 28px; }
+.track-name.long { font-size: 12px; letter-spacing: .04em; }
+.track-name { font-size: 16px; font-weight: 400; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-stats { display: flex; gap: 28px; }
+.stat { display: flex; align-items: baseline; gap: 9px; }
+.stat-label { color: #657186; font: 9px "DM Mono", monospace; letter-spacing: .15em; }
+.stat strong { font: 18px "DM Mono", monospace; font-weight: 400; color: #dce9f6; }
+.playfield {
+  position: relative;
+  flex: 1;
+  min-height: 250px;
+  max-height: 650px;
+  overflow: hidden;
+  border-top: 1px solid rgba(145,190,225,.08);
+  border-bottom: 1px solid rgba(145,190,225,.08);
+  background:
+    radial-gradient(ellipse at 50% 80%, rgba(40,86,125,.22), transparent 60%),
+    linear-gradient(180deg, rgba(7,10,16,.95), rgba(9,14,22,.95));
+  touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+/* レーン線・タップ時の発光（SVG。ノーツと同じ遠近式で描画） */
+.lane-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 22%);
+}
+.lane-line { stroke: rgba(150,205,240,.16); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.lane-line.edge { stroke: rgba(170,226,255,.5); }
+.lane-line.primary { stroke: rgba(210,238,255,.78); stroke-width: 2.4; }
+.lane-fill { opacity: 0; transition: opacity .28s ease-out; }
+.lane-fill.on { opacity: 1; transition: none; }
+.judgement-line {
+  position: absolute; left: 8%; right: 8%; bottom: 18%;
+  height: 3px; transform: translateY(50%); border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #bdeaff 10%, #eaf9ff 50%, #bdeaff 90%, transparent);
+  box-shadow: 0 0 12px rgba(120,210,255,.65), 0 0 32px rgba(77,174,255,.25);
+}
+.lane-labels { position: absolute; left: 8%; right: 8%; bottom: 7%; display: grid; grid-template-columns: repeat(8,1fr); text-align: center; color: #56667d; font: 10px "DM Mono", monospace; }
+#notes-layer { position: absolute; inset: 0; }
+/* ノーツ：位置・大きさはJSで遠近に合わせて指定 */
+.note {
+  position: absolute;
+  width: 10%; height: 10px;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #f6fdff, #bfeaff 55%, #82d1ff);
+  border: 1px solid rgba(220,246,255,.9);
+  box-shadow: 0 0 6px rgba(150,225,255,.9), 0 0 18px rgba(77,174,255,.45);
+  pointer-events: none;
+}
+.note.flick { background: linear-gradient(180deg,#fff6f9,#ffc6d9 55%,#ff9fbf); box-shadow: 0 0 6px rgba(255,170,200,.9), 0 0 18px rgba(255,110,160,.4); }
+.note.hold { background: linear-gradient(180deg,#f4fffa,#bff5dc 55%,#7fe3b8); box-shadow: 0 0 6px rgba(150,255,210,.85), 0 0 18px rgba(80,220,170,.4); }
+.note.rainbow { border-color: color-mix(in srgb, var(--rainbow-color) 45%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--rainbow-color) 34%, #ffffff), color-mix(in srgb, var(--rainbow-color) 30%, #08090d)); box-shadow: 0 0 5px color-mix(in srgb, var(--rainbow-color) 30%, transparent), 0 0 12px color-mix(in srgb, var(--rainbow-color) 16%, transparent); }
+.arrow { position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translateX(-50%); font: 600 15px/1 "DM Mono", monospace; color: #ffd3e1; text-shadow: 0 0 8px rgba(255,130,170,.8); pointer-events: none; }
+.hold-body { fill: rgba(130,235,190,.16); stroke: rgba(170,255,215,.3); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.hold-body.on { fill: rgba(150,255,210,.34); }
+.vol { display: flex; align-items: center; gap: 6px; margin-left: auto; color: #657186; font: 9px "DM Mono", monospace; letter-spacing: .12em; }
+.vol input { width: 56px; accent-color: #7fd2ff; opacity: .7; }
+.pause-button { display:block; margin-left:14px; padding:7px 11px; border:1px solid rgba(169,220,255,.25); border-radius:3px; background:rgba(12,18,28,.8); color:#bfeaff; font:9px "DM Mono",monospace; letter-spacing:.16em; cursor:pointer; }
+.auto-button { display:none; }
+.auto-button.visible { display:block; }
+.auto-button.on { color:#0a1018; background:#bfeaff; }
+/* フルコン後のタイトル：◯がノーツに変わる */
+.start-note.is-note .note-core {
+  width: 64px; height: 10px; border-radius: 2px;
+  background: linear-gradient(180deg, #f6fdff, #bfeaff 55%, #82d1ff);
+  border: 1px solid rgba(220,246,255,.9);
+  box-shadow: 0 0 6px rgba(150,225,255,.9), 0 0 18px rgba(77,174,255,.45);
+  animation: noteDrop 2.4s ease-in infinite;
+}
+.start-note.is-note .note-halo,
+.start-note.is-note:hover .note-halo {
+  width: 150px; height: 3px; border: 0; border-radius: 2px;
+  transform: translateY(26px); opacity: 1;
+  background: linear-gradient(90deg, transparent, #bdeaff 10%, #eaf9ff 50%, #bdeaff 90%, transparent);
+  box-shadow: 0 0 12px rgba(120,210,255,.65), 0 0 32px rgba(77,174,255,.25);
+}
+.start-note.is-note.hit .note-halo { transform: translateY(26px) scaleY(4); opacity: 0; transition: transform .4s, opacity .4s; }
+@keyframes noteDrop {
+  0%   { transform: translateY(-40px); opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { transform: translateY(26px); opacity: 1; }
+  100% { transform: translateY(26px); opacity: 0; }
+}
+.result-content h2.shimmer { background: linear-gradient(90deg, #7fd0ff 0%, #ffffff 45%, #7fd0ff 90%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.6s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: 0 0; } }
+.result-content h2.gameover { color: #ff9fb4; text-shadow: 0 0 22px rgba(255,110,150,.35); }
+.result-rank.big { font-size: 13px; letter-spacing: .26em; color: #d9f4ff; text-shadow: 0 0 14px rgba(108,208,255,.6); }
+.result-note { margin-top: 26px; min-height: 12px; color: #7f8da3; font: 9px "DM Mono", monospace; letter-spacing: .3em; }
+.result-note:empty { margin-top: 0; min-height: 0; }
+#result-screen { overflow: hidden; }
+#confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+#confetti i { position: absolute; top: -4%; width: 7px; height: 16px; border-radius: 2px; opacity: 0; animation: confettiFall linear forwards; }
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  8% { opacity: .95; }
+  100% { transform: translateY(112vh) rotate(540deg); opacity: .8; }
+}
+.result-actions { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+.song-title { position: absolute; left: 50%; top: 36%; transform: translate(-50%,-50%); width: 88%; white-space: normal; text-align: center; color: rgba(225,243,255,.9); font: 300 clamp(15px, 3.4vw, 26px) "DM Mono", monospace; letter-spacing: .3em; text-shadow: 0 0 18px rgba(99,207,255,.5); opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+.song-title.show { opacity: 1; }
+.judgement {
+  position: absolute; left: 50%; bottom: 30%; transform: translate(-50%, 0);
+  color: #d9f4ff; font: 500 16px "DM Mono", monospace; letter-spacing: .24em;
+  text-shadow: 0 0 14px rgba(108,208,255,.8); opacity: 0;
+  transition: opacity .15s; pointer-events: none;
+}
+.judgement.show { opacity: 1; }
+.judgement[data-k="PERFECT"] { color: #fff; }
+.judgement[data-k="GOOD"] { color: #a8e5ff; text-shadow: 0 0 10px rgba(108,208,255,.5); }
+.judgement[data-k="MISS"] { color: #7d8aa0; text-shadow: none; }
+/* ヒット時のリング */
+.burst {
+  position: absolute; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid rgba(190,236,255,.85); pointer-events: none;
+  animation: burst .38s ease-out forwards;
+}
+.burst.perfect { border-color: #fff; box-shadow: 0 0 14px rgba(140,220,255,.8); }
+@keyframes burst {
+  from { transform: translate(-50%,-50%) scale(.6); opacity: 1; }
+  to   { transform: translate(-50%,-50%) scale(3.2); opacity: 0; }
+}
+/* 中央の大きなコンボ表示 */
+.combo-big { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.combo-big.show { opacity: 1; }
+.combo-big b { display: block; font: 300 clamp(40px, 9vw, 64px)/1 "DM Mono", monospace; color: rgba(225,243,255,.9); text-shadow: 0 0 22px rgba(99,207,255,.45); }
+.combo-big span { font: 9px "DM Mono", monospace; letter-spacing: .3em; color: rgba(150,200,230,.6); }
+.track-message {
+  position: absolute; top: 14%; left: 50%; transform: translateX(-50%);
+  text-align: center; color: rgba(180,199,220,.55);
+  font: 9px/1.9 "DM Mono", monospace; letter-spacing: .16em;
+  pointer-events: none; transition: opacity .6s;
+}
+.countdown { position:absolute; inset:0; display:grid; place-items:center; color:#dff5ff; font:300 48px Manrope; text-shadow:0 0 24px #6dcfff; pointer-events:none; }
+.progress-wrap { padding: 14px 0 5px; }
+.progress-track { height: 2px; background: #202938; overflow: hidden; }
+.progress { width: 0; height: 100%; background: #9cddff; box-shadow: 0 0 8px #7bcfff; }
+.progress-time { display:flex; justify-content:space-between; margin-top:7px; color:#647086; font:9px "DM Mono",monospace; }
+.game-bottom { display:flex; justify-content:space-between; padding-top: 12px; color:#4c586b; font:8px "DM Mono",monospace; letter-spacing:.15em; }
+
+#result-screen { align-items:center; justify-content:center; }
+.result-content { width:min(420px, calc(100% - 40px)); text-align:center; margin-top:-2vh; }
+.result-content h2 { font-size: 36px; font-weight:300; letter-spacing:.2em; margin:14px 0 28px; }
+.result-score { font:300 clamp(36px, 8vw, 54px) "DM Mono",monospace; letter-spacing:.08em; }
+.result-rank { color:#a8e5ff; font:10px "DM Mono",monospace; letter-spacing:.3em; margin:9px 0 32px; }
+.result-grid { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid #242c39; border-bottom:1px solid #242c39; padding:18px 0; gap:6px; }
+.result-grid div { display:flex; flex-direction:column; gap:9px; }
+.result-grid span { color:#68758a; font:8px "DM Mono",monospace; letter-spacing:.1em; }
+.result-grid strong { color:#dce7f3; font:15px "DM Mono",monospace; font-weight:400; }
+.text-button { margin-top:36px; background:none; border:0; color:#9eacbf; font:10px "DM Mono",monospace; letter-spacing:.18em; cursor:pointer; padding:12px 18px; }
+.text-button span { color:#b8eaff; margin-left:10px; }
+.text-button:hover { color:#fff; }
+
+@media (max-width: 600px) {
+  .topbar { height:50px; }
+  .brand span { display:none; }
+  .site-footer { height:34px; }
+  .title-center h1 { letter-spacing:.15em; padding-left:.15em; }
+  .start-note { margin-top:42px; }
+  #game-screen { padding-left:12px; padding-right:12px; }
+  .game-head { padding-top:8px; }
+  .game-stats { gap:17px; }
+  .game-row { gap: 8px 14px; }
+  .vol, .pause-button { margin-left: 0; }
+  .track-name { font-size:14px; }
+  .playfield { max-height:none; }
+  .note { height:8px; }
+  .result-grid span { font-size:7px; letter-spacing:0; }
+}
+
+#app:has(#game-screen.active) .site-footer { display: none; }
+
+/* 横画面（スマホ想定）：ゲーム中は上下の帯を隠してプレイ領域を広げる */
+@media (orientation: landscape) and (max-height: 560px) {
+  #app:has(#game-screen.active) .topbar,
+  #app:has(#game-screen.active) .site-footer { display: none; }
+  #game-screen { padding-top: 4px; padding-bottom: 6px; }
+  .game-head { padding: 4px 0 8px; }
+  .playfield { min-height: 0; max-height: none; }
+  .progress-wrap { padding: 8px 0 2px; }
+  .game-bottom { display: none; }
+}
+</style>
+</head>
+<body>
+  <main id="app">
+    <header class="topbar">
+      <div class="brand">CADENZA <span>RHYTHM PROJECT</span></div>
+      <div class="version">VER. 0.19</div>
+    </header>
+
+    <section id="title-screen" class="screen active">
+      <div class="title-center">
+        <div class="eyebrow">A GAME ABOUT MUSIC</div>
+        <h1>CADENZA</h1>
+        <div class="subtitle">NO INSTRUCTIONS. JUST MUSIC.</div>
+        <button id="start-note" class="start-note" aria-label="Start game">
+          <span class="note-core"></span>
+          <span class="note-halo"></span>
+        </button>
+        <div class="start-caption">TAP TO START</div>
+      </div>
+      <div class="title-footer">CLICK THE NOTE</div>
+    </section>
+
+    <section id="game-screen" class="screen">
+      <div class="game-head">
+        <div class="track-name" id="track-name">FIRST LIGHT</div>
+        <div class="game-row">
+        <div class="game-stats">
+          <div class="stat"><span class="stat-label">SCORE</span><strong id="score">000000</strong></div>
+          <div class="stat"><span class="stat-label">COMBO</span><strong id="combo">0</strong></div>
+        </div>
+        <label class="vol"><span>VOL</span><input id="vol" type="range" min="0" max="100" value="70" aria-label="volume"></label>
+        <button id="pause-button" class="pause-button" type="button">PAUSE</button>
+        <button id="auto-button" class="pause-button auto-button" type="button">AUTO: OFF</button>
+        </div>
+      </div>
+
+      <div id="playfield" class="playfield">
+        <svg class="lane-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="laneGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fd2ff" stop-opacity="0"/><stop offset="1" stop-color="#7fd2ff" stop-opacity=".38"/></linearGradient>
+            <linearGradient id="laneBase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a8cb4" stop-opacity="0"/><stop offset="1" stop-color="#5a8cb4" stop-opacity=".10"/></linearGradient>
+          </defs>
+          <g id="lane-g"></g>
+        </svg>
+        <svg id="hold-svg" class="lane-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="judgement-line"></div>
+        <div class="lane-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div>
+        <div id="notes-layer"></div>
+        <div id="judgement" class="judgement"></div>
+        <div id="combo-big" class="combo-big"><b id="combo-num">0</b><span>COMBO</span></div>
+        <div id="song-title" class="song-title"></div>
+        <div id="track-message" class="track-message">MISS IS OK.<br>KEEP PLAYING UNTIL THE END.</div>
+        <div id="countdown" class="countdown"></div>
+      </div>
+
+      <div class="game-bottom">
+        <span id="bottom-name">FIRST LIGHT</span>
+        <span>© CADENZA</span>
+      </div>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div id="confetti"></div>
+      <div class="result-content">
+        <div class="eyebrow" id="result-eyebrow">MOVEMENT 1 COMPLETE</div>
+        <h2 id="result-title">RESULT</h2>
+        <div class="result-score" id="result-score">000000</div>
+        <div class="result-rank" id="result-rank">CLEAR</div>
+        <div class="result-grid">
+          <div><span>PERFECT</span><strong id="perfect-count">0</strong></div>
+          <div><span>GOOD</span><strong id="good-count">0</strong></div>
+          <div><span>MISS</span><strong id="miss-count">0</strong></div>
+          <div><span>MAX COMBO</span><strong id="max-combo">0</strong></div>
+        </div>
+        <div class="result-note" id="result-note"></div>
+        <div class="result-actions">
+          <button id="retry" class="text-button">RETRY <span>↻</span></button>
+          <button id="back-title" class="text-button">BACK TO TITLE <span>↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <span>© CADENZA</span>
+    </footer>
+  </main>
+  <script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const screens = { title: $("title-screen"), game: $("game-screen"), result: $("result-screen") };
+
+  const LANES = 8; // 通常時のフリーレーン数
+  const activeLaneCount = () => state.stage === 4 ? 5 : LANES;
+  const laneWeights = () => state.stage === 4 ? [1.5, 1, 1, 1, 1] : Array(LANES).fill(1);
+
+  // ---- 譜面ヘルパー（time: 曲開始からの秒 / lane: 左端 0〜7 / w: 幅） ----
+  const tap   = (time, lane, w = 1, lv = 1) => ({ type: "tap", time, lane, w, lv });
+  const flick = (time, lane, dir, w = 1, lv = 1) => ({ type: "flick", time, lane, w, dir, lv }); // dir: up/down/left/right
+  const hold  = (time, end, lane, w = 1, lv = 1) => ({ type: "hold", time, end, lane, w, lv });
+
+  // ステージごとの譜面。ステージ2は、ステージ1の左右反転（仮）。
+  const SWAP = { left: "right", right: "left" };
+  const mirror = (c) => c.map(n => {
+    const m = { ...n, lane: LANES - n.lane - n.w };
+    if (n.dir) m.dir = SWAP[n.dir] || n.dir;
+    return m;
+  });
+
+  // 最初の曲の設定。今後ここに曲・謎の条件を追加していく。
+  const TRACK = {
+    title: "Cadenza",
+    duration: 25.6,
+    bpm: 150,
+    // lv: そのノーツが登場する楽章（第lv楽章以降）。楽章が進むほどノーツが増える。
+    chart: [
+      tap(1.6,1,2,1), tap(2.2,2,1,6), tap(2.4,3,2,1), tap(3.2,1,2,1),
+      tap(3.6,2,1,1), flick(4.0,3,"up",2,1), tap(4.4,2,1,3), tap(4.6,2,1,9),
+      tap(4.8,1,2,1), tap(5.2,2,1,2), tap(5.6,3,2,1), tap(6.0,3,1,5),
+      tap(6.2,2,1,8), tap(6.4,1,2,1), tap(6.8,3,1,2), flick(7.2,3,"right",2,2),
+      tap(7.6,3,1,4), tap(7.8,2,1,10), tap(8.0,2,2,1), tap(8.4,1,1,3),
+      hold(8.8,9.5,3,2,1), tap(9.6,2,1,1), tap(9.6,6,2,6), tap(9.8,3,1,7),
+      tap(10.0,4,2,5), tap(10.4,3,1,1), tap(10.6,5,1,9), flick(10.8,5,"left",2,2),
+      tap(11.2,3,1,1), tap(11.4,4,1,8), tap(11.6,5,1,1), tap(11.8,4,1,10),
+      hold(12.0,12.7,5,2,3), tap(12.8,0,2,7), tap(12.8,3,2,1), tap(13.2,3,1,4),
+      tap(13.4,3,1,6), flick(13.6,3,"up",2,3), tap(14.0,3,1,3), tap(14.2,2,1,9),
+      tap(14.4,3,2,1), tap(14.8,4,1,5), flick(15.0,4,"up",2,4), tap(15.2,3,2,1),
+      tap(15.6,2,1,2), tap(15.8,1,1,8), tap(16.0,3,2,1), tap(16.4,3,1,4),
+      flick(16.6,4,"right",2,5), hold(16.8,17.5,3,2,5), tap(17.6,6,2,9), tap(17.6,1,2,1),
+      tap(18.0,4,1,3), flick(18.2,5,"left",2,6), tap(18.4,3,2,1), tap(18.8,3,1,6),
+      tap(19.0,2,1,10), hold(19.2,20.5,4,2,7), tap(20.6,6,1,7), tap(20.8,5,2,1),
+      tap(21.2,2,1,1), tap(21.4,4,1,9), tap(21.6,5,2,1), flick(22.0,5,"up",2,7),
+      tap(22.2,5,1,9), tap(22.4,4,1,1), tap(22.6,5,1,10), flick(22.8,6,"up",2,8),
+      tap(23.2,5,1,1), tap(23.4,4,1,6), tap(23.6,3,2,4), tap(24.0,0,2,8),
+      flick(24.0,4,"right",2,1), tap(24.0,6,2,10)
+    ]
+  };
+
+  // 音量(0.0〜1.0)。曲の終了時に0かどうかを謎の判定に使う
+  let volume = 0.7;
+
+  // 進行状況の保存（ステージ番号と発見フラグ）
+  const STORE_KEY = "untitled.progress.v1";
+  function loadProgress() {
+    try {
+      if (/[?&]reset/.test(location.search)) return { stage: 0, flags: {} };
+      const o = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (o && typeof o.stage === "number") return { stage: o.stage, flags: o.flags || {} };
+    } catch (_) {}
+    return { stage: 0, flags: {} };
+  }
+  function saveProgress() { try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (_) {} }
+  const progress = loadProgress();
+
+  const state = { running: false, startAt: 0, elapsed: 0, notes: [], score: 0, combo: 0, maxCombo: 0,
+    perfect: 0, good: 0, miss: 0, audio: null, raf: 0, pointers: new Map(), stage: 0, touches: 0, fifthHits: 0, rainbowHits: 0, wrongRainbowTouches: 0, flickHits: 0, pauseStarted: false, paused: false, pausedAt: 0, auto: false, startOrientation: null, orientationChanged: false };
+
+  // ステージ（楽章）ごとの曲名と譜面。譜面は仮（2・3は1の左右反転）。
+  const rainbowColors = ["#ff7777", "#ffb36b", "#f4e77a", "#8cdb9b", "#83d8e8", "#91a8ff", "#d49bea"];
+  // 第五楽章：5レーン。第1レーンを親指に見立てて太くし、通常譜面も配置。
+  // 通常譜面は既存譜面を5レーンに割り当て直す。クリア条件は第4レーンの全ノーツ。
+  const chartAt = (lv) => TRACK.chart.filter(n => n.lv <= lv); // 第lv楽章の通常譜面
+  const fifthChart = chartAt(5).map(n => {
+    const laneMap = [0, 1, 2, 4, 0, 1, 2, 4];
+    return { ...n, lane: laneMap[n.lane], w: 1 };
+  });
+  for (let i = 0; i < 11; i++) fifthChart.push({ ...tap(1.8 + i * 2, 3), fifthTarget: true });
+  const sixthChart = chartAt(6).map(n => ({ ...n }));
+  // 虹色ノーツ7つ：他のノーツと離れたレーン・時刻に配置（誤タッチ防止）
+  [[1.8, 7], [4.8, 7], [8.0, 7], [11.7, 0], [14.4, 0], [18.9, 7], [21.7, 0]].forEach(([time, lane], i) => {
+    sixthChart.push({ ...tap(time, lane), rainbow: rainbowColors[i], target: true });
+  });
+  // 第八楽章：最後のロングノーツを曲の終わりまで保持する。
+  const eighthChart = chartAt(8).map(n => ({ ...n }));
+  const lastHold = eighthChart.filter(n => n.type === "hold").at(-1);
+  if (lastHold) lastHold.end = TRACK.duration + 2;
+  // 楽章の英語タイトル
+  const TITLES = ["Curtain Up", "If You Listen Closely", "The Bored Conductor", "Contrarian", "The Bride",
+    "After the Rain", "Verweile doch, du bist so schön", "The Railroad Goes On Forever", "Copernicus", "Finale"];
+  const KANJI = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+  const STAGE_CHARTS = [chartAt(1), mirror(chartAt(2)), mirror(chartAt(3)), chartAt(4), fifthChart,
+    sixthChart, chartAt(7), eighthChart, chartAt(9), chartAt(10)]; // 最後は第十楽章「フィナーレ」
+  const FINALE = 9;                         // 第十楽章のインデックス
+  const STAGES = STAGE_CHARTS.map((chart, i) => ({ name: `第${KANJI[i]}楽章・${TITLES[i]}`, chart }));
+  const FLICK_TOTAL = STAGES[3].chart.filter(n => n.type === "flick").length; // 第四楽章：全フリック数
+
+  const playfield = $("playfield");
+  const notesLayer = $("notes-layer");
+  const holdSvg = $("hold-svg");
+  const HIT_Y_RATIO = 0.82;   // 判定ラインの高さ
+  const START_Y_RATIO = 0.10; // ノーツが奥から現れる位置
+  const FALL_TIME = 1.3;      // 奥から判定ラインまで流れる時間
+  const R_FAR = 0.5;          // 奥でのレーン幅 ÷ 判定ライン上のレーン幅（大きいほど浅い）
+  const VP_Y = (START_Y_RATIO * 100 - R_FAR * HIT_Y_RATIO * 100) / (1 - R_FAR); // 消失点(％)
+  const FLICK_PX = 22;        // フリックと見なす指の移動量
+  const DIRS = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
+  const ARROWS = { up: "↑", down: "↓", left: "←", right: "→" };
+  let LANE_X0 = 8, LANE_W = 12, pfW = 1; // 判定ライン上のレーン左端・1レーン幅(％) / 領域幅(px)
+
+  // 遠近：x,yとも消失点に向かって線形に収束（レーン線もノーツも同じ式）
+  const scAt = (p) => 1 / (1 / R_FAR + (1 - 1 / R_FAR) * p);
+  const yAt = (sc) => VP_Y + (HIT_Y_RATIO * 100 - VP_Y) * sc;
+  const laneUnitAt = (lanePos) => {
+    const weights = laneWeights();
+    const whole = Math.floor(Math.max(0, Math.min(weights.length, lanePos)));
+    let sum = weights.slice(0, whole).reduce((a, b) => a + b, 0);
+    if (whole < weights.length) sum += (lanePos - whole) * weights[whole];
+    return sum;
+  };
+  const xAt = (lanePos, sc) => 50 + (LANE_X0 + laneUnitAt(lanePos) * LANE_W - 50) * sc;
+  const laneAtUnit = (unit) => {
+    const weights = laneWeights(); let acc = 0;
+    for (let i = 0; i < weights.length; i++) { if (unit <= acc + weights[i]) return i + (unit - acc) / weights[i]; acc += weights[i]; }
+    return weights.length;
+  };
+  const pOf = (t) => Math.min(1.2, 1 - (t - state.elapsed) / FALL_TIME);
+
+  // 画面サイズに合わせてレーン線などを作り直す（横画面では幅を抑える）
+  function layout() {
+    pfW = playfield.clientWidth || 1;
+    const pfH = playfield.clientHeight || 1;
+    const laneCount = activeLaneCount();
+    const totalPx = Math.min(pfW * 0.88, pfH * 1.9);
+    const totalUnits = laneWeights().reduce((a, b) => a + b, 0);
+    LANE_W = totalPx / pfW * 100 / totalUnits;
+    LANE_X0 = 50 - LANE_W * totalUnits / 2;
+    const xs = (k, y) => (50 + (LANE_X0 + laneUnitAt(k) * LANE_W - 50) * (y - VP_Y) / (HIT_Y_RATIO * 100 - VP_Y)).toFixed(2);
+    let h = `<polygon points="${xs(0,0)},0 ${xs(laneCount,0)},0 ${xs(laneCount,100)},100 ${xs(0,100)},100" fill="url(#laneBase)"/>`;
+    for (let i = 0; i < laneCount; i++) h += `<polygon class="lane-fill" points="${xs(i,0)},0 ${xs(i+1,0)},0 ${xs(i+1,100)},100 ${xs(i,100)},100" fill="url(#laneGlow)"/>`;
+    for (let k = 0; k <= laneCount; k++) {
+      const edge = k === 0 || k === laneCount;
+      h += `<line class="lane-line${edge ? " edge" : ""}" x1="${xs(k,0)}" y1="0" x2="${xs(k,100)}" y2="100"/>`;
+    }
+    $("lane-g").innerHTML = h;
+    const right = `${100 - LANE_X0 - LANE_W * totalUnits}%`;
+    const labels = playfield.querySelector(".lane-labels");
+    labels.innerHTML = Array.from({ length: laneCount }, (_, i) => `<span>${i + 1}</span>`).join("");
+    labels.style.gridTemplateColumns = laneWeights().map(w => `${w}fr`).join(" ");
+    for (const sel of [".judgement-line", ".lane-labels"]) {
+      const el = playfield.querySelector(sel);
+      el.style.left = `${LANE_X0}%`; el.style.right = right;
+    }
+  }
+
+  function showScreen(name) {
+    Object.values(screens).forEach(s => s.classList.remove("active"));
+    screens[name].classList.add("active");
+    if (name === "title") updateTitleNote();
+  }
+  // フルコン後（未クリア）は、最初に押した◯がノーツになっている
+  function titleIsNote() { return !!progress.flags.fullCombo && !progress.flags.cleared; }
+  function updateTitleNote() {
+    const b = $("start-note");
+    b.classList.remove("hit");
+    b.classList.toggle("is-note", titleIsNote());
+  }
+  // 落ちてくるノーツの紙吹雪
+  function confetti() {
+    const box = $("confetti");
+    const colors = ["#bfeaff", "#ffc6d9", "#bff5dc", "#f4e77a", "#d49bea", "#ffffff"];
+    let h = "";
+    for (let i = 0; i < 44; i++) {
+      h += `<i style="left:${(Math.random() * 100).toFixed(1)}%;background:${colors[i % colors.length]};` +
+        `animation-duration:${(3.2 + Math.random() * 2.6).toFixed(2)}s;animation-delay:${(Math.random() * 2.2).toFixed(2)}s;` +
+        `box-shadow:0 0 8px ${colors[i % colors.length]}"></i>`;
+    }
+    box.innerHTML = h;
+    clearTimeout(confetti.t);
+    confetti.t = setTimeout(() => { box.innerHTML = ""; }, 9000);
+  }
+  function endingClear() {
+    const b = $("start-note");
+    b.classList.add("hit");
+    progress.flags.cleared = true;
+    saveProgress();
+    const f = progress.flags.final || { score: 0, perfect: 0, good: 0, miss: 0, maxCombo: 0 };
+    setTimeout(() => {
+      b.classList.remove("hit", "is-note");
+      $("result-score").textContent = String(f.score + 1000).padStart(6, "0");
+      $("perfect-count").textContent = f.perfect + 1;
+      $("good-count").textContent = f.good;
+      $("miss-count").textContent = 0;
+      $("max-combo").textContent = f.maxCombo + 1;
+      $("result-eyebrow").textContent = "ALL MOVEMENTS COMPLETE";
+      $("result-title").textContent = "FULL COMBO";
+      $("result-title").classList.add("shimmer");
+      $("result-rank").textContent = "FULL COMBO RATE 100%";
+      $("result-rank").classList.add("big");
+      $("result-note").textContent = "THANK YOU FOR PLAYING.";
+      $("retry").innerHTML = "RETRY <span>↻</span>";
+      $("retry").style.display = "";
+      showScreen("result");
+      confetti();
+    }, 450);
+  }
+  function formatTime(seconds) { return `0:${String(Math.max(0, Math.floor(seconds))).padStart(2, "0")}`; }
+
+  // ================= オリジナル楽曲「Cadenza」（ダンス系ポップ ver.） =================
+  // 150BPM・D minor。16分音符 = 0.1秒、1小節 = 1.6秒、全16小節 = 25.6秒（TRACK.duration）。
+  // 構成：イントロ(2) → Aメロ(4) → ビルド(2) → サビ(7) → 終止(1)
+  // リード（メロディ）はノーツと同じ時刻に鳴る（譜面はこのメロディから作成）。
+  const STEP = 0.1, BARS = 16, SONG_STEPS = BARS * 16, AUDIO_LEAD = 0.12;
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const CHORDS = {
+    Dm: { root: 38, pad: [62, 65, 69], arp: [62, 65, 69, 74] },
+    Bb: { root: 34, pad: [58, 62, 65], arp: [62, 65, 70, 74] },
+    F:  { root: 41, pad: [60, 65, 69], arp: [60, 65, 69, 72] },
+    C:  { root: 36, pad: [60, 64, 67], arp: [60, 64, 67, 72] },
+    Gm: { root: 43, pad: [58, 62, 67], arp: [62, 67, 70, 74] },
+    A:  { root: 45, pad: [61, 64, 69], arp: [61, 64, 69, 73] }
+  };
+  const PROG = ["Dm","Bb", "Dm","Bb","F","C", "Gm","A", "Bb","C","Dm","F","Bb","C","A", "Dm"];
+  const secOf = (bar) => bar < 2 ? 0 : bar < 6 ? 1 : bar < 8 ? 2 : bar < 15 ? 3 : 4; // 0イントロ 1A 2ビルド 3サビ 4終止
+  // メロディ [通しstep, MIDI音, 種類(t:タップ h:ロング f:フリック), 長さstep]
+  const MELODY = [
+    [16,74,"t",4],
+    [22,77,"t",2],
+    [24,82,"t",6],
+    [32,74,"t",3],
+    [36,77,"t",2],
+    [40,81,"f",4],
+    [44,79,"t",2],
+    [46,77,"t",2],
+    [48,74,"t",3],
+    [52,77,"t",2],
+    [56,82,"t",4],
+    [60,81,"t",2],
+    [62,79,"t",2],
+    [64,77,"t",3],
+    [68,81,"t",2],
+    [72,84,"f",4],
+    [76,81,"t",2],
+    [78,79,"t",2],
+    [80,79,"t",3],
+    [84,76,"t",2],
+    [88,84,"h",8],
+    [96,79,"t",2],
+    [98,82,"t",2],
+    [100,86,"t",3],
+    [104,82,"t",2],
+    [106,86,"t",2],
+    [108,89,"f",4],
+    [112,81,"t",2],
+    [114,85,"t",2],
+    [116,88,"t",2],
+    [118,85,"t",2],
+    [120,88,"h",8],
+    [128,86,"t",3],
+    [132,82,"t",2],
+    [134,81,"t",2],
+    [136,82,"f",4],
+    [140,81,"t",2],
+    [142,79,"t",2],
+    [144,84,"t",3],
+    [148,84,"t",2],
+    [150,86,"f",2],
+    [152,84,"t",4],
+    [156,79,"t",2],
+    [158,76,"t",2],
+    [160,81,"t",3],
+    [164,81,"t",2],
+    [166,86,"f",2],
+    [168,81,"h",8],
+    [176,84,"t",3],
+    [180,84,"t",2],
+    [182,89,"f",2],
+    [184,84,"t",4],
+    [188,81,"t",2],
+    [190,77,"t",2],
+    [192,86,"h",14],
+    [206,89,"t",2],
+    [208,88,"t",3],
+    [212,79,"t",2],
+    [214,84,"t",2],
+    [216,88,"t",4],
+    [220,91,"f",2],
+    [222,88,"t",2],
+    [224,85,"t",2],
+    [226,88,"t",2],
+    [228,93,"f",2],
+    [232,88,"t",2],
+    [234,85,"t",2],
+    [236,81,"t",4],
+    [240,86,"f",16]
+  ];
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    const ctx = new AudioContext();
+    const master = ctx.createGain();
+    master.gain.value = 0.12 * volume;
+    master.connect(ctx.destination);
+    ctx._master = master;
+    return ctx;
+  }
+
+  function scheduleMusic(ctx, t0) {
+    const master = ctx._master;
+    const END = t0 + SONG_STEPS * STEP;
+    // 出力段：コンプレッサー → 終端フェード → マスター
+    const fade = ctx.createGain();
+    fade.gain.setValueAtTime(1, END - 0.5);
+    fade.gain.linearRampToValueAtTime(0, END - 0.02);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.15;
+    comp.connect(fade); fade.connect(master);
+    const bus = ctx.createGain(); bus.gain.value = 0.6; bus.connect(comp);
+    // サイドチェイン風のポンピング用バス（キックに合わせて沈む）
+    const padBus = ctx.createGain(); padBus.connect(bus);
+    const bassBus = ctx.createGain(); bassBus.connect(bus);
+    const pump = (node, t) => {
+      node.gain.setValueAtTime(0.3, t);
+      node.gain.linearRampToValueAtTime(1, t + 0.26);
+    };
+    // 付点8分(0.3秒)のディレイ：リード・アルペジオ用
+    const delay = ctx.createDelay(1); delay.delayTime.value = STEP * 3;
+    const fb = ctx.createGain(); fb.gain.value = 0.32;
+    const dlp = ctx.createBiquadFilter(); dlp.type = "lowpass"; dlp.frequency.value = 2800;
+    const send = ctx.createGain(); send.gain.value = 0.22;
+    send.connect(delay); delay.connect(dlp); dlp.connect(fb); fb.connect(delay); dlp.connect(bus);
+    // リバーブ（自作インパルス）
+    const rvLen = Math.floor(ctx.sampleRate * 1.4);
+    const rvBuf = ctx.createBuffer(2, rvLen, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = rvBuf.getChannelData(c);
+      for (let i = 0; i < rvLen; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rvLen, 2.8);
+    }
+    const reverb = ctx.createConvolver(); reverb.buffer = rvBuf;
+    const rvOut = ctx.createGain(); rvOut.gain.value = 0.3;
+    const rvSend = ctx.createGain(); rvSend.gain.value = 0.5;
+    rvSend.connect(reverb); reverb.connect(rvOut); rvOut.connect(bus);
+    // ノイズ素材
+    const nLen = Math.floor(ctx.sampleRate * 2);
+    const nBuf = ctx.createBuffer(1, nLen, ctx.sampleRate);
+    const nd = nBuf.getChannelData(0);
+    for (let i = 0; i < nLen; i++) nd[i] = Math.random() * 2 - 1;
+
+    const env = (g, t, peak, a, d) => {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + a);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    };
+    const noise = (t, dur, type, freq, q, peak) => {
+      const s = ctx.createBufferSource(); s.buffer = nBuf;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain(); env(g, t, peak, 0.002, dur);
+      s.connect(f); f.connect(g); g.connect(bus);
+      s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
+    };
+    const osc = (type, freq, t, end) => {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t);
+      o.start(t); o.stop(end); return o;
+    };
+
+    // --- ドラム ---
+    const kick = (t) => {
+      const o = osc("sine", 160, t, t + 0.3); o.frequency.exponentialRampToValueAtTime(44, t + 0.1);
+      const g = ctx.createGain(); env(g, t, 0.62, 0.002, 0.22); o.connect(g); g.connect(bus);
+      noise(t, 0.012, "highpass", 3000, 0.7, 0.12); // アタックのクリック
+    };
+    const snare = (t, v = 1) => {
+      noise(t, 0.17, "bandpass", 1900, 0.7, 0.18 * v);
+      noise(t + 0.008, 0.1, "highpass", 3500, 0.7, 0.07 * v); // クラップ寄りの層
+      const o = osc("triangle", 200, t, t + 0.12); const g = ctx.createGain(); env(g, t, 0.08 * v, 0.002, 0.08);
+      o.connect(g); g.connect(bus);
+    };
+    const hat = (t, v, open) => noise(t, open ? 0.14 : 0.04, "highpass", 7500, 0.7, v * 0.6);
+    const crash = (t, v) => noise(t, 1.8, "highpass", 4200, 0.5, v * 0.6);
+    const riser = (t, dur) => {
+      const s = ctx.createBufferSource(); s.buffer = nBuf; s.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(9000, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + dur - 0.1);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(bus);
+      s.start(t); s.stop(t + dur + 0.05);
+    };
+
+    // --- 楽器 ---
+    // ベース：ソー＋サブ。ローパスのエンベロープでうねらせる
+    const bass = (t, midi, dur, v = 1) => {
+      const f = mtof(midi);
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 3;
+      lp.frequency.setValueAtTime(1500, t); lp.frequency.exponentialRampToValueAtTime(320, t + 0.14);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.3 * v, t + 0.006);
+      g.gain.setValueAtTime(0.3 * v, t + Math.max(0.02, dur - 0.03));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
+      const o1 = osc("sawtooth", f, t, t + dur + 0.1); const g1 = ctx.createGain(); g1.gain.value = 0.55;
+      o1.connect(g1); g1.connect(lp); lp.connect(g);
+      const o2 = osc("sine", f, t, t + dur + 0.1); const g2 = ctx.createGain(); g2.gain.value = 0.95;
+      o2.connect(g2); g2.connect(g);
+      g.connect(bassBus);
+    };
+    // パッド：弱い持続音（コードの下支え）
+    const padNote = (t, dur, tones, v) => {
+      tones.forEach((m) => {
+        const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1100;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(v, t + 0.15);
+        g.gain.setValueAtTime(v, t + Math.max(0.16, dur - 0.05));
+        g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.25);
+        [-9, 9].forEach((c) => {
+          const o = osc("sawtooth", mtof(m), t, t + dur + 0.3); o.detune.value = c; o.connect(lp);
+        });
+        lp.connect(g); g.connect(padBus);
+      });
+    };
+    // コードスタブ：サビの跳ねるリズム
+    const stab = (t, tones, v, dur) => {
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 1.5;
+      lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(900, t + dur + 0.1);
+      const g = ctx.createGain(); env(g, t, v, 0.004, dur);
+      tones.forEach((m) => [-7, 7].forEach((c) => {
+        const o = osc("sawtooth", mtof(m), t, t + dur + 0.2); o.detune.value = c; o.connect(lp);
+      }));
+      lp.connect(g); g.connect(padBus);
+    };
+    // アルペジオ：短いプラック
+    const pluck = (t, midi, v) => {
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 2.5;
+      lp.frequency.setValueAtTime(4200, t); lp.frequency.exponentialRampToValueAtTime(800, t + 0.16);
+      const g = ctx.createGain(); env(g, t, v, 0.003, 0.18);
+      const o = osc("sawtooth", mtof(midi), t, t + 0.3);
+      o.connect(lp); lp.connect(g); g.connect(bus); g.connect(send);
+    };
+    // リード：デチューンしたソー＋矩形。長い音にはビブラート
+    const lead = (t, midi, kind, steps) => {
+      const f = mtof(midi);
+      const dur = Math.max(0.16, steps * STEP * 0.92);
+      const peak = kind === "f" ? 0.15 : 0.12;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 2;
+      lp.frequency.setValueAtTime(5600, t); lp.frequency.exponentialRampToValueAtTime(2300, t + 0.25);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(peak * 0.62, t + Math.min(0.2, dur * 0.5));
+      g.gain.setValueAtTime(peak * 0.62, t + dur - 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+      let lfo = null, lg = null;
+      if (steps >= 6) {
+        lfo = ctx.createOscillator(); lfo.frequency.value = 5.5;
+        lg = ctx.createGain(); lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(9, t + 0.4);
+        lfo.connect(lg); lfo.start(t); lfo.stop(t + dur + 0.2);
+      }
+      [["sawtooth", -7, 1], ["sawtooth", 7, 1], ["square", 0, 0.45]].forEach(([type, cents, gain]) => {
+        const o = osc(type, f, t, t + dur + 0.2); o.detune.value = cents;
+        if (lg) lg.connect(o.detune);
+        const og = ctx.createGain(); og.gain.value = gain; o.connect(og); og.connect(lp);
+      });
+      lp.connect(g); g.connect(bus); g.connect(send); g.connect(rvSend);
+    };
+
+    // --- ドラム・パッド・ベース・アルペジオの配置 ---
+    const ARP8 = [0, 1, 2, 3, 2, 1, 2, 3], ARP16 = [0, 1, 2, 3, 2, 3, 1, 2];
+    for (let s = 0; s < SONG_STEPS; s++) {
+      const bar = s >> 4, k = s & 15, tt = t0 + s * STEP, sec = secOf(bar);
+      let kk = false, sn = 0, h = 0, open = false;
+      if (sec === 0) { kk = bar >= 1 && (k === 0 || k === 8); if (bar >= 1 && k % 2 === 0) h = 0.03; if (bar === 1 && k >= 12) sn = 0.5; }
+      else if (sec === 1) { kk = k % 4 === 0; if (k === 4 || k === 12) sn = 1; if (k % 2 === 0) h = k % 4 === 0 ? 0.075 : 0.05; open = k === 14; }
+      else if (sec === 2) {
+        if (bar === 6) { kk = k % 4 === 0; if (k % 4 === 0) sn = 0.8; if (k % 2 === 0) h = 0.05; }
+        else { kk = k < 12 && k % 2 === 0; if (k < 12) { sn = 0.5 + k * 0.04; h = 0.05; } } // スネアロール→1拍の無音
+      } else if (sec === 3) {
+        kk = k % 4 === 0; if (k === 4 || k === 12) sn = 1;
+        h = k % 4 === 0 ? 0.075 : k % 2 === 0 ? 0.055 : 0.038; open = k === 6 || k === 14;
+      } else { kk = k === 0; }
+      if (kk) { kick(tt); if (sec >= 1 && sec <= 3) { pump(padBus, tt); pump(bassBus, tt); } }
+      if (sn) snare(tt, sn);
+      if (h) hat(tt, h, open);
+      if (s === 32 || s === 128 || s === 192 || s === 240) crash(tt, s === 128 ? 0.2 : 0.14);
+    }
+    riser(t0 + 6 * 16 * STEP, 2.8); // ビルド：奥へ向かうノイズ（ドロップ直前の1拍は無音）
+
+    for (let bar = 0; bar < BARS; bar++) {
+      const c = CHORDS[PROG[bar]], bt = t0 + bar * 16 * STEP, sec = secOf(bar);
+      // パッド
+      padNote(bt, 16 * STEP, c.pad, sec === 0 ? 0.022 : sec === 4 ? 0.026 : 0.018);
+      // アルペジオ
+      if (sec <= 3) {
+        const fast = bar === 7 || sec === 3;
+        const v = sec === 0 ? 0.055 : sec === 1 ? 0.045 : sec === 2 ? 0.05 : 0.036;
+        const stepsPer = fast ? 1 : 2;
+        for (let k = 0; k < 16; k += stepsPer) {
+          if (bar === 7 && k >= 12) break;            // ドロップ前の無音
+          const idx = (fast ? ARP16 : ARP8)[(k / stepsPer) % 8];
+          pluck(bt + k * STEP, c.arp[idx], v);
+        }
+      }
+      // ベース
+      if (sec === 0) { if (bar >= 1) bass(bt, c.root, 1.5, 0.9); }
+      else if (sec === 1) {
+        [[0, 0], [3, 0], [6, 12], [8, 0], [11, 0], [14, 12]].forEach(([k, o]) => bass(bt + k * STEP, c.root + o, 0.17));
+      } else if (sec === 2) {
+        if (bar === 6) { for (let k = 0; k < 16; k += 2) bass(bt + k * STEP, c.root, 0.14, 1.0); }
+        else { for (let k = 0; k < 12; k++) bass(bt + k * STEP, c.root, 0.08, 1.0); }
+      } else if (sec === 3) {
+        [[0, 0], [2, 12], [3, 0], [6, 0], [8, 0], [10, 12], [11, 0], [14, 12]].forEach(([k, o]) => bass(bt + k * STEP, c.root + o, 0.12));
+        // コードスタブ（跳ねるリズム）
+        [0, 3, 6, 10].forEach((k) => stab(bt + k * STEP, c.pad, 0.05, 0.1));
+      } else { bass(bt, c.root, 1.5, 1.0); stab(bt, c.pad, 0.09, 0.6); }
+    }
+    MELODY.forEach(([s, midi, kind, steps]) => lead(t0 + s * STEP, midi, kind, steps));
+  }
+
+  // 楽曲を開始し、ゲーム時計を音に合わせる（出力遅延ぶん映像を遅らせる）
+  function startMusic() {
+    const ctx = state.audio;
+    if (!ctx) { state.startAt = performance.now(); return; }
+    const t0 = ctx.currentTime + AUDIO_LEAD;
+    try { scheduleMusic(ctx, t0); } catch (e) { console.error(e); }
+    const latency = ctx.outputLatency || ctx.baseLatency || 0;
+    state.startAt = performance.now() + (AUDIO_LEAD + latency) * 1000;
+  }
+
+  function resetState() {
+    cancelAnimationFrame(state.raf);
+    Object.assign(state, { running: false, elapsed: 0, score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, touches: 0, fifthHits: 0, rainbowHits: 0, wrongRainbowTouches: 0, flickHits: 0, pauseStarted: false, paused: false, pausedAt: 0, startOrientation: null, orientationChanged: false });
+    state.pointers.clear();
+    $("song-title").classList.remove("show");
+    notesLayer.innerHTML = "";
+    holdSvg.innerHTML = "";
+    state.notes = STAGES[state.stage].chart.map((n, i) => {
+      const note = { ...n, id: i, done: false, headHit: false, active: false, armed: false };
+      const mk = (cls) => {
+        const el = document.createElement("div");
+        el.className = `note ${cls}`; el.style.visibility = "hidden";
+        notesLayer.appendChild(el); return el;
+      };
+      if (n.type === "hold") {
+        note.body = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        note.body.setAttribute("class", "hold-body");
+        holdSvg.appendChild(note.body);
+        note.tail = mk("hold tail");
+      }
+      note.el = mk(n.type + (n.target ? " rainbow" : ""));
+      if (n.rainbow) note.el.style.setProperty("--rainbow-color", n.rainbow);
+      if (n.type === "flick") {
+        note.arrow = document.createElement("span");
+        note.arrow.className = "arrow"; note.arrow.textContent = ARROWS[n.dir];
+        note.el.appendChild(note.arrow);
+      }
+      return note;
+    });
+    updateStats();
+  }
+
+  function updateStats() {
+    $("score").textContent = String(state.score).padStart(6, "0");
+    $("combo").textContent = String(state.combo);
+    $("combo-num").textContent = String(state.combo);
+    $("combo-big").classList.toggle("show", state.combo >= 2);
+  }
+
+  function startGame() {
+    state.stage = progress.stage;
+    if (state.audio) { state.audio.close().catch(() => {}); state.audio = null; }
+    state.audio = initAudio();
+    if (state.audio && state.audio.state === "suspended") state.audio.resume().catch(() => {});
+    $("track-name").textContent = $("bottom-name").textContent = STAGES[state.stage].name;
+    $("track-name").classList.toggle("long", STAGES[state.stage].name.length > 24);
+    resetState();
+    showScreen("game");
+    layout();
+    $("pause-button").textContent = "PAUSE";
+    $("auto-button").classList.toggle("visible", state.stage === FINALE && !!progress.flags.autoUnlocked);
+    updateAutoButton();
+    $("track-message").style.opacity = state.stage === 0 ? "1" : "0";
+    $("countdown").textContent = "3";
+    let count = 3;
+    const countTimer = setInterval(() => {
+      count--;
+      $("countdown").textContent = count > 0 ? String(count) : "START";
+      if (count <= 0) {
+        clearInterval(countTimer);
+        setTimeout(() => { $("countdown").textContent = ""; beginTrack(); }, 350);
+      }
+    }, 650);
+  }
+
+  function beginTrack() {
+    if (state.audio && state.audio.state === "suspended") state.audio.resume().catch(() => {});
+    $("song-title").textContent = STAGES[state.stage].name;
+    $("song-title").classList.add("show");
+    state.pauseStarted = state.stage !== 6;
+    if (state.stage !== 6) startMusic(); // 第七楽章はPAUSEを押した時に曲が始まる
+    else state.startAt = performance.now();
+    state.startOrientation = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
+    state.orientationChanged = false;
+    state.running = true;
+    state.raf = requestAnimationFrame(tick);
+  }
+
+  // 四角ノーツを遠近に合わせて配置
+  function place(el, n, p, arrowEl) {
+    const sc = scAt(Math.max(p, 0));
+    el.style.left = `${xAt(n.lane + n.w / 2, sc)}%`;
+    el.style.top = `${yAt(sc)}%`;
+    el.style.width = `${(laneUnitAt(n.lane + n.w) - laneUnitAt(n.lane)) * LANE_W * sc * 0.94}%`;
+    el.style.height = `${Math.max(3, LANE_W * laneWeights().reduce((a,b)=>a+b,0) / 100 * pfW * 0.045 * sc)}px`;
+    // 奥では淡く現れ、取り逃したノーツは判定ラインを通過して消える
+    el.style.opacity = p > 1 ? Math.max(0, 1 - (p - 1) / 0.1) : Math.min(1, p * 5);
+    if (arrowEl) arrowEl.style.transform = `translateX(-50%) scale(${0.6 + 0.4 * sc})`;
+  }
+
+  function updateNote(n) {
+    if (n.done) return;
+    const dt = n.time - state.elapsed;
+    if (n.active && state.elapsed >= n.end && state.stage !== 7) { completeHold(n); return; }
+    // 取り逃し（フリック操作中は少し待つ）
+    if (!n.headHit && dt < -0.22 && !(n.armed && dt > -0.5)) {
+      if (state.stage === 5 && !n.target) removeNote(n);
+      else missNote(n);
+      if (state.stage === 5 && n.target) n.targetMissed = true;
+      return;
+    }
+    if (dt > FALL_TIME) return;
+    n.el.style.visibility = "visible";
+    let p = pOf(n.time);
+    if (n.headHit) p = Math.min(1, p); // 押し始めたロングは判定ラインに留まる
+    place(n.el, n, p, n.arrow);
+    if (n.type !== "hold") return;
+    const pt = pOf(n.end);
+    const sH = scAt(Math.max(p, 0)), sT = scAt(Math.max(pt, 0));
+    const x1H = xAt(n.lane, sH), x2H = xAt(n.lane + n.w, sH), yH = yAt(sH);
+    const x1T = xAt(n.lane, sT), x2T = xAt(n.lane + n.w, sT), yT = yAt(sT);
+    n.body.setAttribute("points", `${x1T},${yT} ${x2T},${yT} ${x2H},${yH} ${x1H},${yH}`);
+    if (state.stage === 7) {
+      const fade = Math.max(0, Math.min(1, (state.elapsed - (TRACK.duration - 4)) / 2));
+      n.body.style.opacity = String(1 - fade);
+      if (n.tail) n.tail.style.opacity = String(1 - fade);
+    }
+    n.tail.style.visibility = pt >= 0 ? "visible" : "hidden";
+    if (pt >= 0) place(n.tail, n, pt);
+    if (n.active) for (let l = n.lane; l < n.lane + n.w; l++) flashLane(l); // 押している間は光らせる
+  }
+
+  function tick(now) {
+    if (!state.running) return;
+    if ((state.stage === 6 && !state.pauseStarted) || state.paused) { state.raf = requestAnimationFrame(tick); return; }
+    state.elapsed = (now - state.startAt) / 1000;
+    if (state.auto && state.stage === FINALE) autoPlay();
+    state.notes.forEach(updateNote);
+    if (state.elapsed > 3.2) $("song-title").classList.remove("show");
+    if (state.elapsed > 5 && state.elapsed < 5.1) $("track-message").style.opacity = "0";
+    if (state.elapsed >= TRACK.duration) { finishTrack(); return; }
+    state.raf = requestAnimationFrame(tick);
+  }
+
+  // オートモード：時刻になったノーツをPERFECTで自動処理（ロングは終点まで保持）
+  function autoPlay() {
+    state.notes.forEach(n => {
+      if (n.done || n.headHit || state.elapsed < n.time) return;
+      hitNote(n, 0);
+      if (n.type === "hold") { n.active = true; n.body.classList.add("on"); }
+    });
+  }
+
+  // ---- 判定 ----
+  function registerMiss() {
+    state.miss++; state.combo = 0;
+    showJudgement("MISS"); updateStats();
+  }
+  function addJudge(perfect) {
+    if (perfect) { state.perfect++; state.score += 1000; } else { state.good++; state.score += 500; }
+    state.combo++; state.maxCombo = Math.max(state.maxCombo, state.combo);
+    showJudgement(perfect ? "PERFECT" : "GOOD"); updateStats();
+  }
+  function showJudgement(label) {
+    const el = $("judgement");
+    el.textContent = label; el.dataset.k = label;
+    el.classList.add("show");
+    clearTimeout(showJudgement.timer);
+    showJudgement.timer = setTimeout(() => el.classList.remove("show"), 260);
+  }
+  function removeNote(n) { n.done = true; n.el.remove(); if (n.tail) n.tail.remove(); if (n.body) n.body.remove(); }
+
+  function hitNote(n, diff) {
+    const perfect = diff <= 0.13;
+    addJudge(perfect); burst(n, perfect);
+    n.headHit = true; n.armed = false;
+    if (state.stage === 3 && n.type === "flick") state.flickHits++; // 第四楽章：成功したフリックを記録
+    if (state.stage === 4 && n.fifthTarget) state.fifthHits++;
+    if (state.stage === 5 && n.target) state.rainbowHits++;
+    if (n.type !== "hold") removeNote(n);
+  }
+  function missNote(n) {
+    removeNote(n);
+    registerMiss();
+    if (n.type === "hold") registerMiss(); // ロングは始点・終点で2ノーツ分
+  }
+  function completeHold(n) { removeNote(n); addJudge(true); burst({ lane: n.lane, w: n.w }, true); }
+  function breakHold(n) { removeNote(n); registerMiss(); }
+
+  // ---- 入力（マルチタッチ対応） ----
+  // 指の位置を、見た目のレーン（遠近）に合わせて判定ライン上のレーン座標へ換算
+  function laneFloat(e) {
+    const r = playfield.getBoundingClientRect();
+    const xPct = (e.clientX - r.left) / r.width * 100;
+    const yPct = (e.clientY - r.top) / r.height * 100;
+    const sc = Math.max(0.15, (yPct - VP_Y) / (HIT_Y_RATIO * 100 - VP_Y));
+    const unit = (50 + (xPct - 50) / sc - LANE_X0) / LANE_W;
+    return laneAtUnit(unit);
+  }
+
+  playfield.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    state.touches++; // 一度でも触れたか（第三楽章の判定用）
+    try { playfield.setPointerCapture(e.pointerId); } catch (_) {}
+    const lf = laneFloat(e);
+    const laneCount = activeLaneCount();
+    flashLane(Math.max(0, Math.min(laneCount - 1, Math.floor(lf))));
+    const ptr = { sx: e.clientX, sy: e.clientY, hold: null, flick: null, diff: 0 };
+    state.pointers.set(e.pointerId, ptr);
+    if (!state.running || state.paused) return;
+    // 時間が近く、指のレーンに近いノーツを1つ選ぶ
+    let best = null, bestScore = Infinity, bestDiff = 0;
+    state.notes.forEach(n => {
+      if (n.done || n.headHit) return;
+      const diff = Math.abs(n.time - state.elapsed);
+      if (diff > 0.28) return;
+      const dist = lf < n.lane ? n.lane - lf : lf > n.lane + n.w ? lf - n.lane - n.w : 0;
+      if (dist > 0.5) return;
+      const sc = diff + dist * 0.1;
+      if (sc < bestScore) { bestScore = sc; best = n; bestDiff = diff; }
+    });
+    if (!best) return;
+    if (state.stage === 5 && !best.target) { state.wrongRainbowTouches++; return; }
+    if (best.type === "flick") { ptr.flick = best; ptr.diff = bestDiff; best.armed = true; return; }
+    hitNote(best, bestDiff);
+    if (best.type === "hold") { best.active = true; best.body.classList.add("on"); ptr.hold = best; }
+  });
+
+  playfield.addEventListener("pointermove", (e) => {
+    const ptr = state.pointers.get(e.pointerId);
+    if (!ptr || !ptr.flick) return;
+    const n = ptr.flick;
+    if (n.done || n.headHit) { ptr.flick = null; return; }
+    const dx = e.clientX - ptr.sx, dy = e.clientY - ptr.sy, len = Math.hypot(dx, dy);
+    if (len < FLICK_PX) return;
+    const v = DIRS[n.dir];
+    const reverse = state.stage === 3 ? -1 : 1;
+    if ((dx * v[0] * reverse + dy * v[1] * reverse) / len >= 0.5) hitNote(n, ptr.diff); // 指定方向（±60°以内）
+    else n.armed = false;                                           // 方向違いは不成立
+    ptr.flick = null;
+  });
+
+  function endPointer(e) {
+    const ptr = state.pointers.get(e.pointerId);
+    if (!ptr) return;
+    state.pointers.delete(e.pointerId);
+    if (ptr.flick) ptr.flick.armed = false;
+    const h = ptr.hold;
+    if (h && !h.done) {
+      if (state.elapsed >= h.end - 0.25) completeHold(h); // 終点付近で離せば成功（寛容）
+      else breakHold(h);
+    }
+  }
+  playfield.addEventListener("pointerup", endPointer);
+  playfield.addEventListener("pointercancel", endPointer);
+
+  // ---- 演出 ----
+  function flashLane(lane) {
+    const el = document.querySelectorAll(".lane-fill")[lane];
+    if (!el) return;
+    el.classList.add("on");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove("on"), 90);
+  }
+  function burst(n, perfect) {
+    const b = document.createElement("div");
+    b.className = "burst" + (perfect ? " perfect" : "");
+    b.style.left = `${LANE_X0 + (n.lane + n.w / 2) * LANE_W}%`;
+    b.style.top = `${HIT_Y_RATIO * 100}%`;
+    b.addEventListener("animationend", () => b.remove());
+    notesLayer.appendChild(b);
+  }
+
+  function finishTrack() {
+    state.running = false;
+    cancelAnimationFrame(state.raf);
+    state.pointers.clear();
+    if (state.audio) { state.audio.close().catch(() => {}); state.audio = null; }
+    $("result-score").textContent = String(state.score).padStart(6, "0");
+    $("perfect-count").textContent = state.perfect;
+    $("good-count").textContent = state.good;
+    $("miss-count").textContent = state.miss;
+    $("max-combo").textContent = state.maxCombo;
+    // 楽章ごとの条件を満たしたときだけ次へ進む（next: クリア時の次の楽章番号 / -1: 未クリア）
+    let next = -1;
+    const railroadHeld = state.stage === 7 && state.notes.some(n => n.type === "hold" && n.active && !n.done);
+    if (state.stage === 0) next = 1;
+    else if (state.stage === 1 && volume === 0) next = 2;
+    else if (state.stage === 2 && state.touches === 0) { next = 3; progress.flags.movement3 = true; }
+    else if (state.stage === 3 && state.flickHits === FLICK_TOTAL) next = 4;
+    else if (state.stage === 4 && state.fifthHits === STAGES[4].chart.filter(n => n.fifthTarget).length) next = 5;
+    else if (state.stage === 5 && state.rainbowHits === 7 && state.wrongRainbowTouches === 0 &&
+             !state.notes.some(n => n.target && !n.done && !n.headHit)) next = 6;
+    else if (state.stage === 6) next = 7;
+    else if (state.stage === 7 && railroadHeld) next = 8;
+    else if (state.stage === 8 && state.orientationChanged) { next = 9; progress.flags.copernicus = true; }
+    if (next >= 0 && next <= FINALE) progress.stage = next;
+    const canAdvance = next >= 0 && next <= FINALE;
+    // 失敗＝楽章の条件を満たせなかった（第十楽章はフルコンボでないこと）
+    const failed = state.stage === FINALE ? state.miss !== 0 : next < 0;
+    $("retry").innerHTML = canAdvance ? "NEXT <span>→</span>" : "RETRY <span>↻</span>";
+    $("retry").style.display = "";
+    $("result-eyebrow").textContent = `MOVEMENT ${state.stage + 1} ${failed ? "FAILED" : "COMPLETE"}`;
+    ["shimmer", "gameover"].forEach(c => $("result-title").classList.remove(c));
+    $("result-rank").classList.remove("big");
+    $("result-note").textContent = "";
+    $("confetti").innerHTML = "";
+    let celebrate = false;
+    if (failed) {
+      $("result-title").textContent = "GAME OVER";
+      $("result-title").classList.add("gameover");
+      $("result-rank").textContent = "FAILED";
+    } else if (state.stage === FINALE) {
+      // 第十楽章：フルコンボ＝クリア。「フルコンボ率99%」。最初のプレイでフルコンできなければオート解放（下で）。
+      $("result-title").textContent = "FULL COMBO";
+      $("result-title").classList.add("shimmer");
+      $("result-rank").textContent = progress.flags.cleared ? "FULL COMBO RATE 100%" : "FULL COMBO RATE 99%";
+      $("result-rank").classList.add("big");
+      celebrate = true;
+    } else {
+      $("result-title").innerHTML = `Next is<br>${TITLES[next]}`;
+      $("result-rank").textContent = state.miss === 0 ? "CLEAR" : "CLEARED";
+    }
+    if (state.stage === FINALE) {
+      progress.flags.finaleTries = (progress.flags.finaleTries || 0) + 1;
+      if (!failed) {
+        progress.flags.fullCombo = true;
+        progress.flags.final = { score: state.score, perfect: state.perfect, good: state.good, miss: 0, maxCombo: state.maxCombo };
+      } else if (progress.flags.finaleTries === 1) {
+        progress.flags.autoUnlocked = true; // 最初のプレイでフルコンできなかった → オートモード解放
+        $("result-note").textContent = "AUTO MODE UNLOCKED";
+      }
+    }
+    saveProgress();
+    showScreen("result");
+    if (celebrate) confetti();
+  }
+
+  $("vol").addEventListener("input", (e) => {
+    volume = e.target.value / 100;
+    if (state.audio && state.audio._master) state.audio._master.gain.value = 0.12 * volume;
+  });
+  // ポーズ：最初から常設。時計と音の両方を止める。
+  // （第七楽章だけは、最初の1回で曲が始まる＝「時よ止まれ」の仕掛け）
+  $("pause-button").addEventListener("click", () => {
+    if (!state.running) return;
+    if (state.stage === 6 && !state.pauseStarted) { state.pauseStarted = true; startMusic(); return; }
+    if (!state.paused) {
+      state.paused = true; state.pausedAt = performance.now();
+      if (state.audio) state.audio.suspend().catch(() => {});
+      $("pause-button").textContent = "RESUME";
+      $("countdown").textContent = "PAUSED";
+    } else {
+      state.paused = false;
+      state.startAt += performance.now() - state.pausedAt; // 止めていた時間ぶん時計を戻す
+      if (state.audio) state.audio.resume().catch(() => {});
+      $("pause-button").textContent = "PAUSE";
+      $("countdown").textContent = "";
+    }
+  });
+  function updateAutoButton() {
+    const b = $("auto-button");
+    b.textContent = state.auto ? "AUTO: ON" : "AUTO: OFF";
+    b.classList.toggle("on", state.auto);
+  }
+  $("auto-button").addEventListener("click", () => { state.auto = !state.auto; updateAutoButton(); });
+  $("start-note").addEventListener("click", () => { if (titleIsNote()) endingClear(); else startGame(); });
+  $("retry").addEventListener("click", startGame);
+  $("back-title").addEventListener("click", () => {
+    if (state.audio) state.audio.close().catch(() => {});
+    showScreen("title");
+  });
+  // 画面の向き・サイズ変更時にレーンを再計算
+  function checkOrientationChange() {
+    if (state.running && state.stage === 8 && state.startOrientation) {
+      const current = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
+      if (current !== state.startOrientation) state.orientationChanged = true;
+    }
+    layout();
+  }
+  updateTitleNote();
+  window.addEventListener("resize", checkOrientationChange);
+  window.addEventListener("orientationchange", checkOrientationChange);
+})();
+
+</script>
+</body>
+</html>
